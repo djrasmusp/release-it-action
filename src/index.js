@@ -56,6 +56,25 @@ async function run() {
       // Don't load config from file - use only programmatic config
       configPath: false, // Disable config file loading
       hooks: {}, // Initialize empty hooks object
+      plugins: {
+        '@release-it/conventional-changelog': {
+          infile: 'CHANGELOG.md',
+          preset: {
+            name: 'conventionalcommits',
+            type: [
+              {
+                type: 'feat',
+                section: 'Features',
+              },
+              {
+                type: 'fix',
+                section: 'Bug Fixes',
+              },
+            ],
+          },
+        },
+        ...config.plugins,
+      },
       git: {
         commitMessage: "chore: release v${version}",
         requireCleanWorkingDir: false, // Allow uncommitted changes in CI
