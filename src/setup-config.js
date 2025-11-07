@@ -12,6 +12,9 @@ export function ensureConfigFileSync() {
     github: {
       release: false,
     },
+    gitlab: {
+      release: false,
+    },
     npm: {
       publish: false,
     },

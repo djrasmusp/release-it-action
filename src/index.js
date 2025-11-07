@@ -51,6 +51,10 @@ async function run() {
         token: githubToken,
         ...config.github,
       },
+      gitlab: {
+        release: false, // Disable GitLab releases
+        ...config.gitlab,
+      },
       npm: {
         publish: false, // Set to true if you want to publish to npm
         ...config.npm,
