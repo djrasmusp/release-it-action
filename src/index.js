@@ -4,24 +4,6 @@ import * as path from 'path';
 
 // Create config file BEFORE importing release-it, as it reads config on import
 function ensureConfigFile() {
-  // Determine the action directory (where the action is running from)
-  // In GitHub Actions, this is typically in _actions directory
-  // Try multiple methods to find the action directory
-  let actionDir = process.env.GITHUB_ACTION_PATH;
-  
-  if (!actionDir) {
-    // Try to find it from the current working directory
-    // When action runs, it's typically in /home/runner/work/_actions/owner/repo/version
-    const cwd = process.cwd();
-    const actionsMatch = cwd.match(/^(.+\/_actions\/[^\/]+\/[^\/]+(?:\/[^\/]+)?)/);
-    if (actionsMatch) {
-      actionDir = actionsMatch[1];
-    } else {
-      // Fallback to current working directory
-      actionDir = cwd;
-    }
-  }
-
   const minimalConfig = {
     git: {
       requireCleanWorkingDir: false,
@@ -34,34 +16,86 @@ function ensureConfigFile() {
     },
   };
 
-  // Create config file in multiple possible locations
-  // release-it might look in different places depending on how it's loaded
-  const possiblePaths = [
-    path.join(actionDir, 'config', 'release-it.json'),
-    path.join(process.cwd(), 'config', 'release-it.json'),
-  ];
+  const cwd = process.cwd();
+  const configPaths = [];
 
-  for (const configFile of possiblePaths) {
-    const configDir = path.dirname(configFile);
-    
-    if (!fs.existsSync(configDir)) {
-      fs.mkdirSync(configDir, { recursive: true });
-      core.info(`Created config directory: ${configDir}`);
-    }
-
-    if (!fs.existsSync(configFile)) {
-      fs.writeFileSync(configFile, JSON.stringify(minimalConfig, null, 2));
-      core.info(`Created config file: ${configFile}`);
-    } else {
-      core.info(`Config file already exists: ${configFile}`);
+  // Method 1: Try to find _actions directory and construct action path
+  // The error shows: /home/runner/work/_actions/djrasmusp/release-it-action/main/config/release-it.json
+  // We can construct this from GITHUB_WORKSPACE or by finding _actions
+  if (process.env.HOME) {
+    const workBase = path.join(process.env.HOME, 'work');
+    if (fs.existsSync(workBase)) {
+      const actionsBase = path.join(workBase, '_actions');
+      if (fs.existsSync(actionsBase)) {
+        try {
+          // Find all action directories
+          const owners = fs.readdirSync(actionsBase);
+          for (const owner of owners) {
+            const ownerPath = path.join(actionsBase, owner);
+            if (fs.statSync(ownerPath).isDirectory()) {
+              const repos = fs.readdirSync(ownerPath);
+              for (const repo of repos) {
+                const repoPath = path.join(ownerPath, repo);
+                if (fs.statSync(repoPath).isDirectory()) {
+                  const versions = fs.readdirSync(repoPath);
+                  for (const version of versions) {
+                    const versionPath = path.join(repoPath, version);
+                    if (fs.statSync(versionPath).isDirectory()) {
+                      const configFile = path.join(versionPath, 'config', 'release-it.json');
+                      configPaths.push(configFile);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      }
     }
   }
 
-  core.info(`Action directory: ${actionDir}`);
-  core.info(`Current working directory: ${process.cwd()}`);
+  // Method 2: Use GITHUB_ACTION_PATH if available
+  if (process.env.GITHUB_ACTION_PATH) {
+    const configFile = path.join(process.env.GITHUB_ACTION_PATH, 'config', 'release-it.json');
+    if (!configPaths.includes(configFile)) {
+      configPaths.push(configFile);
+    }
+  }
 
-  // Return the primary config file path
-  return possiblePaths[0];
+  // Method 3: Current working directory (where the action is being used)
+  const cwdConfigFile = path.join(cwd, 'config', 'release-it.json');
+  if (!configPaths.includes(cwdConfigFile)) {
+    configPaths.push(cwdConfigFile);
+  }
+
+  // Create config files in all locations
+  for (const configFile of configPaths) {
+    const configDir = path.dirname(configFile);
+    
+    try {
+      if (!fs.existsSync(configDir)) {
+        fs.mkdirSync(configDir, { recursive: true });
+        core.info(`Created config directory: ${configDir}`);
+      }
+
+      if (!fs.existsSync(configFile)) {
+        fs.writeFileSync(configFile, JSON.stringify(minimalConfig, null, 2));
+        core.info(`Created config file: ${configFile}`);
+      } else {
+        core.info(`Config file already exists: ${configFile}`);
+      }
+    } catch (error) {
+      core.warning(`Failed to create config file at ${configFile}: ${error.message}`);
+    }
+  }
+
+  core.info(`Current working directory: ${cwd}`);
+  core.info(`Created config files in ${configPaths.length} locations`);
+
+  // Return the first config file path
+  return configPaths[0] || cwdConfigFile;
 }
 
 async function run() {
@@ -71,7 +105,9 @@ async function run() {
     const configFilePath = ensureConfigFile();
 
     // Dynamically import release-it after config file is created
-    const { default: releaseIt } = await import('release-it');
+    // release-it is CommonJS, so we need to handle it correctly
+    const releaseItModule = await import('release-it');
+    const releaseIt = releaseItModule.default || releaseItModule;
 
     const githubToken = core.getInput('github-token', { required: true });
     const configInput = core.getInput('config');
