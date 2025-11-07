@@ -87,14 +87,11 @@ export function ensureConfigFileSync() {
     try {
       if (!fs.existsSync(configDir)) {
         fs.mkdirSync(configDir, { recursive: true });
-        core.info(`Created config directory: ${configDir}`);
       }
 
       if (!fs.existsSync(configFile)) {
         fs.writeFileSync(configFile, JSON.stringify(minimalConfig, null, 2));
-        core.info(`Created config file: ${configFile}`);
-      } else {
-        core.info(`Config file already exists: ${configFile}`);
+        core.debug(`Created config file: ${configFile}`);
       }
     } catch (error) {
       core.warning(`Failed to create config file at ${configFile}: ${error.message}`);
@@ -162,15 +159,17 @@ export function ensureConfigFileSync() {
           fs.mkdirSync(packageJsonDir, { recursive: true });
         }
         fs.writeFileSync(packageJsonFile, JSON.stringify(minimalPackageJson, null, 2));
-        core.info(`Created package.json: ${packageJsonFile}`);
+        core.debug(`Created package.json: ${packageJsonFile}`);
       }
     } catch (error) {
       core.warning(`Failed to create package.json at ${packageJsonFile}: ${error.message}`);
     }
   }
 
-  core.info(`Current working directory: ${cwd}`);
-  core.info(`Created config files in ${configPaths.length} locations`);
+  // Log summary only if files were created
+  if (configPaths.length > 0) {
+    core.debug(`Created config files in ${configPaths.length} locations`);
+  }
 
   // Return the first config file path
   return configPaths[0] || cwdConfigFile;

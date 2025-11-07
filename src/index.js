@@ -1,24 +1,18 @@
 import * as core from '@actions/core';
-import * as path from 'path';
 import { execSync } from 'child_process';
 
 // IMPORTANT: Import setup-config FIRST to ensure config files are created
 // before release-it is imported (release-it reads config on import)
-// The side-effect import runs the config file creation immediately
 import './setup-config.js';
 import { ensureConfigFileSync } from './setup-config.js';
 
 // Import release-it AFTER config files are set up
-// Since release-it is bundled, it's already included in the bundle
 import releaseIt from 'release-it';
 
 async function run() {
   try {
-    // Ensure config file exists (in case it wasn't created at load time)
-    const configFilePath = ensureConfigFileSync();
-    
-    core.info('Using statically imported release-it');
-    core.info(`Config file path: ${configFilePath}`);
+    // Ensure config files exist (in case they weren't created at load time)
+    ensureConfigFileSync();
 
     // Configure git user info for CI environment
     // This is required even if we don't commit, as release-it may check git status
@@ -30,7 +24,7 @@ async function run() {
       
       execSync(`git config --global user.name "${gitUser}"`, { stdio: 'ignore' });
       execSync(`git config --global user.email "${gitEmail}"`, { stdio: 'ignore' });
-      core.info(`Configured git user: ${gitUser} <${gitEmail}>`);
+      core.debug(`Configured git user: ${gitUser} <${gitEmail}>`);
     } catch (gitConfigError) {
       core.warning(`Failed to configure git user: ${gitConfigError.message}`);
     }
@@ -101,7 +95,6 @@ async function run() {
     };
 
     core.info('Running release-it...');
-    core.info(`Config: ${JSON.stringify(releaseItConfig, null, 2)}`);
 
     // Run release-it programmatically
     try {
