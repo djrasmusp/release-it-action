@@ -21,6 +21,7 @@ async function run() {
     const releaseItConfig = {
       ci: true, // Run in CI mode (non-interactive)
       dryRun,
+      configPath: false, // Disable automatic config file loading
       git: {
         commitMessage: "chore: release v${version}",
         requireCleanWorkingDir: false, // Allow uncommitted changes in CI
