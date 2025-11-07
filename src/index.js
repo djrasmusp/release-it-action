@@ -1,4 +1,5 @@
 import * as core from '@actions/core';
+import * as fs from 'fs';
 import { execSync } from 'child_process';
 
 // IMPORTANT: Import setup-config FIRST to ensure config files are created
@@ -72,10 +73,10 @@ async function run() {
       git: {
         commitMessage: "chore: release v${version}",
         requireCleanWorkingDir: false, // Allow uncommitted changes in CI
-        push: false, // Don't push to git
-        tag: false, // Don't create git tag
-        commit: false, // Don't commit changes
-        addUntrackedFiles: false, // Don't add untracked files
+        push: config.git?.push ?? false, // Allow push to be configured
+        tag: config.git?.tag ?? false, // Allow tag to be configured
+        commit: config.git?.commit ?? true, // Commit changes by default (including CHANGELOG.md)
+        addUntrackedFiles: true, // Add untracked files like CHANGELOG.md
         ...config.git,
       },
       github: {
@@ -112,6 +113,14 @@ async function run() {
         if (result.changelog) {
           core.setOutput('changelog', result.changelog);
         }
+      }
+
+      // Verify CHANGELOG.md was created/updated
+      const changelogPath = 'CHANGELOG.md';
+      if (fs.existsSync(changelogPath)) {
+        core.info(`✓ CHANGELOG.md created/updated successfully`);
+      } else {
+        core.warning(`CHANGELOG.md was not found at ${changelogPath}`);
       }
 
       core.info('Release completed successfully!');
