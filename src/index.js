@@ -1,4 +1,7 @@
 import * as core from '@actions/core';
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
 import releaseIt from 'release-it';
 
 async function run() {
@@ -6,6 +9,35 @@ async function run() {
     const githubToken = core.getInput('github-token', { required: true });
     const configInput = core.getInput('config');
     const dryRun = core.getInput('dry-run') === 'true';
+
+    // Determine the action directory (where the action is running from)
+    // In GitHub Actions, this is typically in _actions directory
+    const actionDir = process.env.GITHUB_ACTION_PATH || process.cwd();
+    const configDir = path.join(actionDir, 'config');
+    const configFile = path.join(configDir, 'release-it.json');
+
+    // Create config directory if it doesn't exist
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+      core.info(`Created config directory: ${configDir}`);
+    }
+
+    // Create minimal config file if it doesn't exist
+    if (!fs.existsSync(configFile)) {
+      const minimalConfig = {
+        git: {
+          requireCleanWorkingDir: false,
+        },
+        github: {
+          release: false,
+        },
+        npm: {
+          publish: false,
+        },
+      };
+      fs.writeFileSync(configFile, JSON.stringify(minimalConfig, null, 2));
+      core.info(`Created config file: ${configFile}`);
+    }
 
     // Parse config if provided, otherwise use defaults
     let config = {};
@@ -21,7 +53,6 @@ async function run() {
     const releaseItConfig = {
       ci: true, // Run in CI mode (non-interactive)
       dryRun,
-      // Remove configPath: false - let release-it use the .release-it.json file
       git: {
         commitMessage: "chore: release v${version}",
         requireCleanWorkingDir: false, // Allow uncommitted changes in CI
