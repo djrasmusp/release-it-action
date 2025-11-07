@@ -64,14 +64,18 @@ async function run() {
           preset: {
             name: 'conventionalcommits',
             type: [
-              {
-                type: 'feat',
-                section: 'Features',
-              },
-              {
-                type: 'fix',
-                section: 'Bug Fixes',
-              },
+                { type: "build", section: "🧱 Dependency" },
+                { type: "chore", section: "🏭 Chores" },
+                { type: "ci", section: "🚦 CI/CD" },
+                { type: "docs", section: "📝 Documentation" },
+                { type: "feat", section: "⭐ New Feature" },
+                { type: "feature", section: "⭐ New Feature" },
+                { type: "fix", section: "🐛 Bug Fix" },
+                { type: "bugfix", section: "🐛 Bug Fix" },
+                { type: "bug", section: "🐛 Bug Fix" },
+                { type: "refactor", section: "♻️ Code Refactoring" },
+                { type: "style", section: "🎨 Styling and Formatting" },
+                { type: "test", section: "🧪 Code Testing" },
             ],
           },
         },
