@@ -1,25 +1,26 @@
 name: Release It
-description: Release a new version of your project
+description: Release a new version of your project using release-it
 inputs:
-  version:
-    description: The version to release
+  github-token:
+    description: GitHub token for authentication
     required: true
-  tag:
-    description: The tag to release
-    required: true
-  release-notes:
-    description: The release notes
-    required: true
+  config:
+    description: JSON configuration for release-it (optional)
+    required: false
+  dry-run:
+    description: Run in dry-run mode (no actual changes)
+    required: false
+    default: 'false'
 outputs:
   version:
     description: The version that was released
     value: ${{ steps.release-it.outputs.version }}
-  tag:
-    description: The tag that was released
-    value: ${{ steps.release-it.outputs.tag }}
-  release-notes:
-    description: The release notes that were released
-    value: ${{ steps.release-it.outputs.release-notes }}
+  latestVersion:
+    description: The previous version
+    value: ${{ steps.release-it.outputs.latestVersion }}
+  changelog:
+    description: The generated changelog
+    value: ${{ steps.release-it.outputs.changelog }}
 runs:
   using: 'node20'
   main: 'dist/index.js'

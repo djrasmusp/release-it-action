@@ -1,22 +1,26 @@
 import commonjs from "@rollup/plugin-commonjs";
+import json from "@rollup/plugin-json";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
-import typescript from "@rollup/plugin-typescript";
 
 const config = {
-  input: "src/index.ts",
+  input: "src/index.js",
   output: {
     file: "dist/index.js",
     format: "es",
     sourcemap: true,
+    inlineDynamicImports: true, // Inline dynamic imports into a single bundle
   },
   plugins: [
-    typescript({
-      tsconfig: "./tsconfig.json",
-      sourceMap: true,
+    json(), // Add JSON plugin first to handle JSON imports
+    nodeResolve({ 
+      preferBuiltins: true,
+      exportConditions: ['node', 'default']
     }),
-    commonjs(),
-    nodeResolve({ preferBuiltins: true }),
+    commonjs({
+      transformMixedEsModules: true,
+    }),
   ],
+  external: [], // release-it and its dependencies will be bundled
 };
 
 export default config;
