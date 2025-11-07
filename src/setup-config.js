@@ -6,6 +6,7 @@ import * as path from 'path';
 // This must run at module load time, before release-it is imported
 export function ensureConfigFileSync() {
   const minimalConfig = {
+    hooks: {},
     git: {
       requireCleanWorkingDir: false,
     },

@@ -39,6 +39,7 @@ async function run() {
       dryRun,
       // Don't load config from file - use only programmatic config
       configPath: false, // Disable config file loading
+      hooks: {}, // Initialize empty hooks object
       git: {
         commitMessage: "chore: release v${version}",
         requireCleanWorkingDir: false, // Allow uncommitted changes in CI
