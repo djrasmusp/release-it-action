@@ -50,7 +50,14 @@ async function run() {
       dryRun,
       // Don't load config from file - use only programmatic config
       configPath: false, // Disable config file loading
-      hooks: {}, // Initialize empty hooks object
+      hooks: {
+        // Add CHANGELOG.md and package.json to git before commit (if they exist)
+        // This ensures they are included even though addUntrackedFiles is false
+        'before:git:release': [
+          'git add CHANGELOG.md package.json package-lock.json 2>/dev/null || true',
+          'git reset HEAD config/release-it.json 2>/dev/null || true',
+        ],
+      },
       plugins: {
         '@release-it/conventional-changelog': {
           infile: 'CHANGELOG.md',
@@ -74,7 +81,8 @@ async function run() {
         commitMessage: "chore: release v${version}",
         requireCleanWorkingDir: false, // Allow uncommitted changes in CI
         commit: config.git?.commit ?? true, // Commit changes by default (including CHANGELOG.md)
-        addUntrackedFiles: true, // Add untracked files like CHANGELOG.md
+        // Only add specific files, not all untracked files (to avoid committing config/release-it.json)
+        addUntrackedFiles: false,
         // If commit is enabled, also enable push by default (unless explicitly disabled)
         push: config.git?.push ?? (config.git?.commit !== false ? true : false),
         // If commit is enabled, also enable tag by default (unless explicitly disabled)
@@ -123,6 +131,38 @@ async function run() {
         core.info(`✓ CHANGELOG.md created/updated successfully`);
       } else {
         core.warning(`CHANGELOG.md was not found at ${changelogPath}`);
+      }
+
+      // Clean up temporary config files that were created
+      // These files are only needed for release-it to run, not for the repository
+      const tempConfigPath = 'config/release-it.json';
+      if (fs.existsSync(tempConfigPath)) {
+        try {
+          // Remove from git staging if it was added
+          try {
+            execSync('git reset HEAD config/release-it.json 2>/dev/null || true', { stdio: 'ignore' });
+          } catch (e) {
+            // Ignore errors
+          }
+          
+          // Remove the file
+          fs.unlinkSync(tempConfigPath);
+          core.debug(`Removed temporary config file: ${tempConfigPath}`);
+          
+          // Also remove config directory if it's empty
+          const configDir = 'config';
+          try {
+            const files = fs.readdirSync(configDir);
+            if (files.length === 0) {
+              fs.rmdirSync(configDir);
+              core.debug(`Removed empty config directory`);
+            }
+          } catch (e) {
+            // Ignore errors when removing directory
+          }
+        } catch (error) {
+          core.warning(`Failed to remove temporary config file: ${error.message}`);
+        }
       }
 
       core.info('Release completed successfully!');
