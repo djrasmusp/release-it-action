@@ -1,0 +1,25 @@
+name: Release It
+description: Release a new version of your project
+inputs:
+  version:
+    description: The version to release
+    required: true
+  tag:
+    description: The tag to release
+    required: true
+  release-notes:
+    description: The release notes
+    required: true
+outputs:
+  version:
+    description: The version that was released
+    value: ${{ steps.release-it.outputs.version }}
+  tag:
+    description: The tag that was released
+    value: ${{ steps.release-it.outputs.tag }}
+  release-notes:
+    description: The release notes that were released
+    value: ${{ steps.release-it.outputs.release-notes }}
+runs:
+  using: 'node22'
+  main: 'dist/index.js'
