@@ -73,10 +73,12 @@ async function run() {
       git: {
         commitMessage: "chore: release v${version}",
         requireCleanWorkingDir: false, // Allow uncommitted changes in CI
-        push: config.git?.push ?? false, // Allow push to be configured
-        tag: config.git?.tag ?? false, // Allow tag to be configured
         commit: config.git?.commit ?? true, // Commit changes by default (including CHANGELOG.md)
         addUntrackedFiles: true, // Add untracked files like CHANGELOG.md
+        // If commit is enabled, also enable push by default (unless explicitly disabled)
+        push: config.git?.push ?? (config.git?.commit !== false ? true : false),
+        // If commit is enabled, also enable tag by default (unless explicitly disabled)
+        tag: config.git?.tag ?? (config.git?.commit !== false ? true : false),
         ...config.git,
       },
       github: {
