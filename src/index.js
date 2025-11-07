@@ -37,10 +37,13 @@ async function run() {
     const releaseItConfig = {
       ci: true, // Run in CI mode (non-interactive)
       dryRun,
-      configPath: configFilePath, // Explicitly set config path
+      // Don't load config from file - use only programmatic config
+      configPath: false, // Disable config file loading
       git: {
         commitMessage: "chore: release v${version}",
         requireCleanWorkingDir: false, // Allow uncommitted changes in CI
+        push: false, // Don't push to git
+        tag: false, // Don't create git tag
         ...config.git,
       },
       github: {
@@ -59,23 +62,31 @@ async function run() {
     core.info(`Config: ${JSON.stringify(releaseItConfig, null, 2)}`);
 
     // Run release-it programmatically
-    const result = await releaseIt(releaseItConfig);
+    try {
+      const result = await releaseIt(releaseItConfig);
 
-    // Set outputs
-    if (result) {
-      if (result.version) {
-        core.setOutput('version', result.version);
-        core.info(`Released version: ${result.version}`);
+      // Set outputs
+      if (result) {
+        if (result.version) {
+          core.setOutput('version', result.version);
+          core.info(`Released version: ${result.version}`);
+        }
+        if (result.latestVersion) {
+          core.setOutput('latestVersion', result.latestVersion);
+        }
+        if (result.changelog) {
+          core.setOutput('changelog', result.changelog);
+        }
       }
-      if (result.latestVersion) {
-        core.setOutput('latestVersion', result.latestVersion);
+
+      core.info('Release completed successfully!');
+    } catch (releaseError) {
+      core.error(`release-it error: ${releaseError.message}`);
+      if (releaseError.stack) {
+        core.error(`Stack trace: ${releaseError.stack}`);
       }
-      if (result.changelog) {
-        core.setOutput('changelog', result.changelog);
-      }
+      throw releaseError;
     }
-
-    core.info('Release completed successfully!');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     core.setFailed(`Release failed: ${message}`);
