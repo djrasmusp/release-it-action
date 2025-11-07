@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
 // IMPORTANT: Import setup-config FIRST to ensure config files are created
 // before release-it is imported (release-it reads config on import)
@@ -18,6 +19,21 @@ async function run() {
     
     core.info('Using statically imported release-it');
     core.info(`Config file path: ${configFilePath}`);
+
+    // Configure git user info for CI environment
+    // This is required even if we don't commit, as release-it may check git status
+    try {
+      const gitUser = process.env.GITHUB_ACTOR || 'github-actions[bot]';
+      const gitEmail = process.env.GITHUB_ACTOR 
+        ? `${process.env.GITHUB_ACTOR}@users.noreply.github.com`
+        : 'github-actions[bot]@users.noreply.github.com';
+      
+      execSync(`git config --global user.name "${gitUser}"`, { stdio: 'ignore' });
+      execSync(`git config --global user.email "${gitEmail}"`, { stdio: 'ignore' });
+      core.info(`Configured git user: ${gitUser} <${gitEmail}>`);
+    } catch (gitConfigError) {
+      core.warning(`Failed to configure git user: ${gitConfigError.message}`);
+    }
 
     const githubToken = core.getInput('github-token', { required: true });
     const configInput = core.getInput('config');
@@ -45,6 +61,8 @@ async function run() {
         requireCleanWorkingDir: false, // Allow uncommitted changes in CI
         push: false, // Don't push to git
         tag: false, // Don't create git tag
+        commit: false, // Don't commit changes
+        addUntrackedFiles: false, // Don't add untracked files
         ...config.git,
       },
       github: {
